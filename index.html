@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gully Bowls — Share Your Thoughts 🍜</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red:     #E8231A;
+      --teal:    #2BBFB3;
+      --cream:   #FFF8F0;
+      --card:    #FFFFFF;
+      --ink:     #1A1A1A;
+      --muted:   #888;
+      --border:  #E8E0D8;
+      --green:   #22C55E;
+      --r-soft:  rgba(232,35,26,0.08);
+      --t-soft:  rgba(43,191,179,0.10);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── LOADING ─────────────────────────────────── */
+    #loading {
+      position: fixed; inset: 0; z-index: 999;
+      background: var(--cream);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px;
+    }
+    #loading img { width: 90px; border-radius: 50%; animation: pulse 1.4s ease-in-out infinite; }
+    #loading p { color: var(--muted); font-size: 0.9rem; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(.95)} }
+
+    /* ── PROGRESS BAR ────────────────────────────── */
+    #pbar {
+      position: fixed; top: 0; left: 0; height: 4px; z-index: 100;
+      background: var(--red);
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+      border-radius: 0 2px 2px 0;
+    }
+
+    /* ── WRAPPER ─────────────────────────────────── */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── STEP BASE ───────────────────────────────── */
+    .step {
+      position: absolute; inset: 0;
+      padding: 28px 24px 130px;
+      display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none;
+      transform: translateX(60px);
+      transition: opacity .38s ease, transform .38s cubic-bezier(.4,0,.2,1);
+      overflow-y: auto;
+    }
+    .step.active   { opacity: 1; pointer-events: all; transform: translateX(0); }
+    .step.exit-l   { opacity: 0; transform: translateX(-60px); }
+
+    /* ── WELCOME ─────────────────────────────────── */
+    #s0 {
+      background: #0D0D0D;
+      color: #fff;
+      align-items: center; justify-content: center; text-align: center;
+      padding: 40px 32px 60px;
+    }
+    #s0 .logo-ring {
+      width: 140px; height: 140px; border-radius: 50%;
+      border: 3px solid var(--teal);
+      overflow: hidden; margin: 0 auto 32px;
+      box-shadow: 0 0 40px rgba(43,191,179,.35);
+    }
+    #s0 .logo-ring img { width: 100%; height: 100%; object-fit: cover; }
+    #s0 h1 {
+      font-family: 'Syne', sans-serif; font-size: 2.8rem;
+      font-weight: 800; line-height: 1.1; margin-bottom: 16px;
+    }
+    #s0 h1 em { font-style: normal; color: var(--teal); }
+    #s0 p {
+      font-size: 1.05rem; color: rgba(255,255,255,.65);
+      line-height: 1.65; margin-bottom: 44px; max-width: 300px;
+    }
+    .btn-launch {
+      background: var(--red); color: #fff; border: none;
+      padding: 18px 44px; font-family: 'Syne',sans-serif;
+      font-size: 1.05rem; font-weight: 700; border-radius: 100px;
+      cursor: pointer; letter-spacing: .03em;
+      box-shadow: 0 8px 32px rgba(232,35,26,.5);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .btn-launch:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(232,35,26,.6); }
+    .btn-launch:active { transform: scale(.97); }
+    #s0 .no-signup { margin-top: 20px; font-size: .8rem; color: rgba(255,255,255,.35); }
+
+    /* ── STEP HEADER ─────────────────────────────── */
+    .s-badge {
+      font-size: .75rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--teal);
+      margin-bottom: 6px;
+    }
+    .s-icon { font-size: 2.8rem; margin-bottom: 10px; display: block; }
+    .s-title {
+      font-family: 'Syne', sans-serif; font-size: 1.9rem;
+      font-weight: 800; line-height: 1.2; margin-bottom: 8px;
+    }
+    .s-sub { font-size: .95rem; color: var(--muted); line-height: 1.6; margin-bottom: 30px; }
+
+    /* ── FIELDS ──────────────────────────────────── */
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block; font-size: .85rem; font-weight: 600;
+      margin-bottom: 7px; color: var(--ink);
+    }
+    .field label .opt { font-weight: 400; color: var(--muted); }
+    .req { color: var(--red); }
+    .field input, .field textarea {
+      width: 100%; padding: 14px 16px;
+      border: 2px solid var(--border); border-radius: 12px;
+      font-family: 'DM Sans', sans-serif; font-size: 1rem;
+      color: var(--ink); background: #fff;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none; -webkit-appearance: none; appearance: none;
+    }
+    .field input:focus, .field textarea:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 4px rgba(43,191,179,.12);
+    }
+    .field textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+
+    /* ── DISH CARD ───────────────────────────────── */
+    .dish-card {
+      background: #fff; border-radius: 20px; overflow: hidden;
+      box-shadow: 0 4px 28px rgba(0,0,0,.1); margin-bottom: 20px;
+    }
+    .dish-img {
+      width: 100%; height: 220px;
+      background: linear-gradient(135deg, var(--teal) 0%, #1a8f89 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 5rem; overflow: hidden;
+    }
+    .dish-img img { width: 100%; height: 100%; object-fit: cover; }
+    .dish-body { padding: 20px 22px; }
+    .dish-eyebrow { font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; color: var(--teal); font-weight: 600; }
+    .dish-name { font-family: 'Syne',sans-serif; font-size: 1.7rem; font-weight: 800; margin-top: 4px; }
+
+    /* ── FLAVOUR CHIPS ───────────────────────────── */
+    .flavour-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-bottom: 24px;
+    }
+    .chip {
+      background: #fff; border: 2px solid var(--border); border-radius: 16px;
+      padding: 20px 14px; text-align: center; cursor: pointer;
+      transition: border-color .2s, background .2s, transform .15s;
+      user-select: none;
+    }
+    .chip .c-emoji { font-size: 2.2rem; display: block; margin-bottom: 8px; }
+    .chip .c-label { font-size: .95rem; font-weight: 600; }
+    .chip:last-child:nth-child(odd) {
+      grid-column: span 2;
+      display: flex; flex-direction: row; align-items: center;
+      gap: 14px; text-align: left; padding: 16px 22px;
+    }
+    .chip:last-child:nth-child(odd) .c-emoji { margin-bottom: 0; }
+    .chip.on { border-color: var(--red); background: var(--r-soft); }
+    .chip.on .c-label { color: var(--red); }
+
+    /* ── PRICE OPTIONS ───────────────────────────── */
+    .price-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+    .price-opt {
+      background: #fff; border: 2px solid var(--border); border-radius: 16px;
+      padding: 20px 24px; display: flex; align-items: center; gap: 18px;
+      cursor: pointer; transition: all .2s; user-select: none;
+    }
+    .price-opt .p-emoji { font-size: 1.9rem; }
+    .price-opt .p-text { font-family: 'Syne',sans-serif; font-size: 1.2rem; font-weight: 700; }
+    .price-opt .p-hint { font-size: .8rem; color: var(--muted); margin-left: auto; }
+    .price-opt.on { border-color: var(--teal); background: var(--t-soft); }
+    .price-opt.on .p-text { color: var(--teal); }
+
+    /* ── STARS ───────────────────────────────────── */
+    .rating-block { margin-bottom: 32px; }
+    .r-label { font-size: 1rem; font-weight: 600; margin-bottom: 14px; color: var(--ink); }
+    .stars { display: flex; gap: 6px; }
+    .star {
+      font-size: 2.4rem; cursor: pointer;
+      user-select: none; transition: transform .15s;
+      filter: grayscale(1) opacity(.25);
+    }
+    .star.lit { filter: none; }
+    .star:hover { transform: scale(1.18); }
+    .star:active { transform: scale(.9); }
+
+    /* ── HEALTHY YES/NO ──────────────────────────── */
+    .yn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .yn {
+      background: #fff; border: 2px solid var(--border); border-radius: 22px;
+      padding: 40px 16px; text-align: center; cursor: pointer;
+      transition: all .25s; user-select: none;
+    }
+    .yn .yn-ico { font-size: 3.2rem; display: block; margin-bottom: 12px; }
+    .yn .yn-lbl { font-family: 'Syne',sans-serif; font-size: 1.35rem; font-weight: 800; }
+    .yn.on-y { border-color: var(--green); background: rgba(34,197,94,.08); }
+    .yn.on-y .yn-lbl { color: var(--green); }
+    .yn.on-n { border-color: var(--red); background: var(--r-soft); }
+    .yn.on-n .yn-lbl { color: var(--red); }
+
+    /* ── INDIA Q ─────────────────────────────────── */
+    .india-card {
+      background: #fff; border-radius: 18px;
+      padding: 22px; margin-top: 22px;
+      border: 2px solid var(--border);
+    }
+    .india-card p { font-size: .98rem; font-weight: 600; line-height: 1.55; margin-bottom: 16px; }
+    .india-btns { display: flex; gap: 12px; }
+    .india-btn {
+      flex: 1; padding: 14px 10px;
+      border: 2px solid var(--border); border-radius: 12px;
+      background: #fff; font-family: 'Syne',sans-serif;
+      font-size: .95rem; font-weight: 700; cursor: pointer;
+      transition: all .2s;
+    }
+    .india-btn.on-y { background: var(--t-soft); border-color: var(--teal); color: var(--teal); }
+    .india-btn.on-n { background: var(--r-soft); border-color: var(--red); color: var(--red); }
+
+    /* ── NAV BAR ─────────────────────────────────── */
+    #nav {
+      position: fixed; bottom: 0; left: 50%;
+      transform: translateX(-50%); width: 100%; max-width: 480px;
+      padding: 16px 24px 36px;
+      background: linear-gradient(transparent, var(--cream) 38%);
+      display: none; gap: 12px; z-index: 50; align-items: center;
+    }
+    .btn-back {
+      width: 54px; height: 54px; border-radius: 50%;
+      border: 2px solid var(--border); background: #fff;
+      font-size: 1.2rem; cursor: pointer;
+      transition: border-color .2s;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .btn-back:hover { border-color: var(--ink); }
+    .btn-back.hide { visibility: hidden; }
+    .btn-next {
+      flex: 1; height: 54px;
+      background: var(--red); color: #fff; border: none;
+      border-radius: 27px; font-family: 'Syne',sans-serif;
+      font-size: 1rem; font-weight: 700; cursor: pointer;
+      box-shadow: 0 5px 22px rgba(232,35,26,.32);
+      transition: transform .2s, box-shadow .2s;
+      letter-spacing: .02em;
+    }
+    .btn-next:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(232,35,26,.42); }
+    .btn-next:active { transform: scale(.98); }
+    .btn-next:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+    /* ── SUCCESS SCREEN ──────────────────────────── */
+    #success {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: var(--cream); flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+      padding: 40px 32px;
+    }
+    #success.show { display: flex; }
+    .s-big { font-size: 5rem; margin-bottom: 24px; animation: pop .5s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes pop { from{transform:scale(0)} to{transform:scale(1)} }
+    .s-h {
+      font-family: 'Syne',sans-serif; font-size: 2.4rem;
+      font-weight: 800; line-height: 1.2; margin-bottom: 16px;
+    }
+    .s-h em { font-style: normal; color: var(--red); }
+    .s-p { font-size: 1.05rem; color: var(--muted); line-height: 1.65; max-width: 300px; }
+    .s-brand { margin-top: 40px; }
+    .s-brand img { width: 70px; border-radius: 50%; opacity: .7; }
+
+    /* ── CONFETTI ────────────────────────────────── */
+    #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 400; }
+
+    /* ── TOAST ───────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 130px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: #1A1A1A; color: #fff;
+      padding: 12px 22px; border-radius: 100px;
+      font-size: .9rem; font-weight: 500;
+      opacity: 0; transition: all .3s; z-index: 500;
+      white-space: nowrap; max-width: 90vw;
+      text-align: center;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <img src="assets/logo.png" alt="Gully Bowls">
+  <p>Loading your bowl... 🍜</p>
+</div>
+
+<!-- PROGRESS -->
+<div id="pbar" style="width:0%"></div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- S0: WELCOME -->
+  <div class="step" id="s0">
+    <div class="logo-ring">
+      <img src="assets/logo.png" alt="Gully Bowls">
+    </div>
+    <h1>Loved your<br><em>bowl?</em></h1>
+    <p>You just experienced something special. Spare 2 minutes and tell us what you really think — it genuinely means the world to us. 🙏</p>
+    <button class="btn-launch" onclick="startForm()">Start My Review →</button>
+    <p class="no-signup">Takes 2 minutes · No sign-up · No spam ever</p>
+  </div>
+
+  <!-- S1: ABOUT YOU -->
+  <div class="step" id="s1">
+    <span class="s-icon">👋</span>
+    <div class="s-badge">Step 1 of 7</div>
+    <h2 class="s-title">Let's meet you!</h2>
+    <p class="s-sub">Just the basics — only your name is required. Everything else is optional!</p>
+    <div class="field">
+      <label>Your Name <span class="req">*</span></label>
+      <input type="text" id="f-name" placeholder="e.g. Priya Sharma" autocomplete="name" inputmode="text">
+    </div>
+    <div class="field">
+      <label>What do you do? <span class="opt">(optional)</span></label>
+      <input type="text" id="f-prof" placeholder="e.g. Startup founder, Designer, Chef…">
+    </div>
+    <div class="field">
+      <label>LinkedIn <span class="opt">(optional)</span></label>
+      <input type="url" id="f-li" placeholder="linkedin.com/in/yourname" inputmode="url">
+    </div>
+    <div class="field">
+      <label>Instagram <span class="opt">(optional)</span></label>
+      <input type="text" id="f-insta" placeholder="@yourhandle">
+    </div>
+  </div>
+
+  <!-- S2: THE BOWL -->
+  <div class="step" id="s2">
+    <span class="s-icon">🍜</span>
+    <div class="s-badge">Step 2 of 7</div>
+    <h2 class="s-title">The bowl you tried</h2>
+    <p class="s-sub">Just confirming — this is what you tasted today, right?</p>
+    <div class="dish-card">
+      <div class="dish-img" id="dish-img-wrap"><span>🍜</span></div>
+      <div class="dish-body">
+        <div class="dish-eyebrow">Today's Feature Bowl</div>
+        <div class="dish-name" id="dish-name-el">Loading…</div>
+      </div>
+    </div>
+    <p style="font-size:.88rem;color:var(--muted);text-align:center;margin-top:4px;">This is the dish you're reviewing today ✅</p>
+  </div>
+
+  <!-- S3: FLAVOURS -->
+  <div class="step" id="s3">
+    <span class="s-icon">✨</span>
+    <div class="s-badge">Step 3 of 7</div>
+    <h2 class="s-title">What flavours hit you?</h2>
+    <p class="s-sub">Tap all that you noticed. Multi-select is totally fine — flavours are complex!</p>
+    <div class="flavour-grid">
+      <div class="chip" data-f="Salty"  onclick="toggleF(this)"><span class="c-emoji">🧂</span><span class="c-label">Salty</span></div>
+      <div class="chip" data-f="Sweet"  onclick="toggleF(this)"><span class="c-emoji">🍯</span><span class="c-label">Sweet</span></div>
+      <div class="chip" data-f="Sour"   onclick="toggleF(this)"><span class="c-emoji">🍋</span><span class="c-label">Sour</span></div>
+      <div class="chip" data-f="Umami"  onclick="toggleF(this)"><span class="c-emoji">🍄</span><span class="c-label">Umami</span></div>
+      <div class="chip" data-f="Bitter" onclick="toggleF(this)"><span class="c-emoji">🌿</span><span class="c-label">Bitter</span></div>
+    </div>
+  </div>
+
+  <!-- S4: PRICE -->
+  <div class="step" id="s4">
+    <span class="s-icon">💰</span>
+    <div class="s-badge">Step 4 of 7</div>
+    <h2 class="s-title">What price feels right?</h2>
+    <p class="s-sub">Based on what you just had — what would you happily pay for this bowl?</p>
+    <div class="price-list">
+      <div class="price-opt" data-p="Below ₹250"  onclick="pickPrice(this)">
+        <span class="p-emoji">🪙</span>
+        <span class="p-text">Below ₹250</span>
+        <span class="p-hint">Budget friendly</span>
+      </div>
+      <div class="price-opt" data-p="₹250–₹300" onclick="pickPrice(this)">
+        <span class="p-emoji">💵</span>
+        <span class="p-text">₹250 – ₹300</span>
+        <span class="p-hint">Sweet spot</span>
+      </div>
+      <div class="price-opt" data-p="₹300–₹350" onclick="pickPrice(this)">
+        <span class="p-emoji">💎</span>
+        <span class="p-text">₹300 – ₹350</span>
+        <span class="p-hint">Premium quality</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- S5: RATINGS -->
+  <div class="step" id="s5">
+    <span class="s-icon">⭐</span>
+    <div class="s-badge">Step 5 of 7</div>
+    <h2 class="s-title">Rate the experience!</h2>
+    <p class="s-sub">Be honest — your ratings literally shape how we cook from tomorrow. No pressure! 😄</p>
+
+    <div class="rating-block">
+      <div class="r-label">🍽️ Taste & Texture</div>
+      <div class="stars" id="stars-taste">
+        <span class="star" data-v="1" onclick="rate('taste',1)">⭐</span>
+        <span class="star" data-v="2" onclick="rate('taste',2)">⭐</span>
+        <span class="star" data-v="3" onclick="rate('taste',3)">⭐</span>
+        <span class="star" data-v="4" onclick="rate('taste',4)">⭐</span>
+        <span class="star" data-v="5" onclick="rate('taste',5)">⭐</span>
+      </div>
+    </div>
+
+    <div class="rating-block">
+      <div class="r-label">👀 Looks, Feels &amp; Aroma</div>
+      <div class="stars" id="stars-imp">
+        <span class="star" data-v="1" onclick="rate('imp',1)">⭐</span>
+        <span class="star" data-v="2" onclick="rate('imp',2)">⭐</span>
+        <span class="star" data-v="3" onclick="rate('imp',3)">⭐</span>
+        <span class="star" data-v="4" onclick="rate('imp',4)">⭐</span>
+        <span class="star" data-v="5" onclick="rate('imp',5)">⭐</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- S6: HEALTHY? -->
+  <div class="step" id="s6">
+    <span class="s-icon">🥗</span>
+    <div class="s-badge">Step 6 of 7</div>
+    <h2 class="s-title">Did you find it healthy?</h2>
+    <p class="s-sub">Your honest gut feeling — literally! This is core to what Gully Bowls stands for.</p>
+    <div class="yn-grid">
+      <div class="yn" id="yn-y" onclick="pickH(true)">
+        <span class="yn-ico">💚</span>
+        <span class="yn-lbl">Yes!</span>
+      </div>
+      <div class="yn" id="yn-n" onclick="pickH(false)">
+        <span class="yn-ico">🤔</span>
+        <span class="yn-lbl">Not Really</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- S7: FEEDBACK -->
+  <div class="step" id="s7">
+    <span class="s-icon">💬</span>
+    <div class="s-badge">Step 7 of 7</div>
+    <h2 class="s-title">Last stop — your voice!</h2>
+    <p class="s-sub">Anything you loved, anything we should fix — we read every single message. Go on!</p>
+    <div class="field">
+      <label>Your Feedback <span class="opt">(optional)</span></label>
+      <textarea id="f-feedback" placeholder="Tell us what blew your mind, what could be improved, or just how the bowl made you feel… 😊"></textarea>
+    </div>
+    <div class="india-card">
+      <p>🇮🇳 Will Gully Bowls work in India's health food market — where people want healthy food in a true Indianised style? <span class="req">*</span></p>
+      <div class="india-btns">
+        <button class="india-btn" id="india-y" onclick="pickIndia(true)">👍 Absolutely!</button>
+        <button class="india-btn" id="india-n" onclick="pickIndia(false)">🤷 Not Sure</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- NAV -->
+<div id="nav">
+  <button class="btn-back hide" id="btn-back" onclick="prevStep()">←</button>
+  <button class="btn-next" id="btn-next" onclick="nextStep()">Continue →</button>
+</div>
+
+<!-- SUCCESS -->
+<div id="success">
+  <div class="s-big">🎉</div>
+  <h2 class="s-h">You're a Gully Bowls<br><em>Legend!</em></h2>
+  <p class="s-p">Thank you for taking the time. Your feedback helps us build something truly extraordinary for India. 🙏</p>
+  <div class="s-brand">
+    <img src="assets/logo.png" alt="Gully Bowls">
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ── INIT ─────────────────────────────────────────── */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let cur = 0;
+
+const fd = {
+  name:'', profession:'', linkedin_profile:'', insta_profile:'',
+  dish_name:'', flavours:[],
+  price_range:'', taste_texture_rating:0, first_impression_rating:0,
+  found_healthy:null, feedback_text:'', india_market_vote:null
+};
+
+async function boot() {
+  try {
+    const { data } = await sb.from('dish_config').select('*').eq('id',1).single();
+    if (data) {
+      fd.dish_name = data.dish_name;
+      document.getElementById('dish-name-el').textContent = data.dish_name;
+      if (data.dish_image_url) {
+        const wrap = document.getElementById('dish-img-wrap');
+        wrap.innerHTML = `<img src="${data.dish_image_url}" alt="${data.dish_name}">`;
+      }
+    }
+  } catch(e) { document.getElementById('dish-name-el').textContent = 'Today\'s Special Bowl'; }
+
+  document.getElementById('loading').style.display = 'none';
+  show(0);
+}
+
+/* ── STEPS ─────────────────────────────────────────── */
+function show(n) {
+  document.querySelectorAll('.step').forEach(s => {
+    s.classList.remove('active','exit-l');
+  });
+
+  const el = document.getElementById('s'+n);
+  if (!el) return;
+  el.classList.add('active');
+
+  const nav  = document.getElementById('nav');
+  const back = document.getElementById('btn-back');
+  const next = document.getElementById('btn-next');
+
+  if (n === 0) { nav.style.display='none'; }
+  else {
+    nav.style.display = 'flex';
+    back.className = 'btn-back' + (n === 1 ? ' hide' : '');
+    next.textContent = n === 7 ? 'Submit My Review 🚀' : 'Continue →';
+    next.disabled = false;
+  }
+
+  const pct = n === 0 ? 0 : Math.round((n/7)*100);
+  document.getElementById('pbar').style.width = pct + '%';
+  cur = n;
+  window.scrollTo(0,0);
+}
+
+function startForm() {
+  document.getElementById('s0').classList.remove('active');
+  show(1);
+}
+
+function prevStep() {
+  if (cur <= 1) return;
+  const c = document.getElementById('s'+cur);
+  c.classList.add('exit-l');
+  setTimeout(()=>c.classList.remove('active','exit-l'), 380);
+  show(cur - 1);
+}
+
+function nextStep() {
+  if (!validate()) return;
+  if (cur === 7) { submit(); return; }
+  const c = document.getElementById('s'+cur);
+  c.classList.add('exit-l');
+  setTimeout(()=>c.classList.remove('active','exit-l'), 380);
+  show(cur + 1);
+}
+
+/* ── VALIDATE ──────────────────────────────────────── */
+function validate() {
+  switch(cur) {
+    case 1:
+      const n = document.getElementById('f-name').value.trim();
+      if (!n) { toast('Please enter your name 😊'); return false; }
+      fd.name = n;
+      fd.profession = document.getElementById('f-prof').value.trim();
+      fd.linkedin_profile = document.getElementById('f-li').value.trim();
+      fd.insta_profile = document.getElementById('f-insta').value.trim();
+      return true;
+    case 2: return true;
+    case 3:
+      if (!fd.flavours.length) { toast('Pick at least one flavour! 🌶️'); return false; }
+      return true;
+    case 4:
+      if (!fd.price_range) { toast('Please pick a price range 💰'); return false; }
+      return true;
+    case 5:
+      if (!fd.taste_texture_rating)    { toast('Rate the taste! ⭐'); return false; }
+      if (!fd.first_impression_rating) { toast('Rate the first impression! 👀'); return false; }
+      return true;
+    case 6:
+      if (fd.found_healthy === null) { toast('Yes or not really? 🥗'); return false; }
+      return true;
+    case 7:
+      fd.feedback_text = document.getElementById('f-feedback').value.trim();
+      if (fd.india_market_vote === null) { toast('Tell us about the India market! 🇮🇳'); return false; }
+      return true;
+  }
+  return true;
+}
+
+/* ── INTERACTIONS ──────────────────────────────────── */
+function toggleF(el) {
+  const f = el.dataset.f;
+  const i = fd.flavours.indexOf(f);
+  if (i > -1) { fd.flavours.splice(i,1); el.classList.remove('on'); }
+  else { fd.flavours.push(f); el.classList.add('on'); animBounce(el); }
+}
+
+function pickPrice(el) {
+  document.querySelectorAll('.price-opt').forEach(o=>o.classList.remove('on'));
+  el.classList.add('on'); fd.price_range = el.dataset.p; animBounce(el);
+}
+
+function rate(type, val) {
+  const id = type === 'taste' ? 'stars-taste' : 'stars-imp';
+  document.querySelectorAll('#'+id+' .star').forEach((s,i)=>s.classList.toggle('lit', i<val));
+  if (type==='taste') fd.taste_texture_rating = val;
+  else fd.first_impression_rating = val;
+  const stars = document.querySelectorAll('#'+id+' .star');
+  animBounce(stars[val-1]);
+}
+
+function pickH(v) {
+  fd.found_healthy = v;
+  document.getElementById('yn-y').className = 'yn' + (v  ? ' on-y' : '');
+  document.getElementById('yn-n').className = 'yn' + (!v ? ' on-n' : '');
+}
+
+function pickIndia(v) {
+  fd.india_market_vote = v;
+  document.getElementById('india-y').className = 'india-btn' + (v  ? ' on-y' : '');
+  document.getElementById('india-n').className = 'india-btn' + (!v ? ' on-n' : '');
+}
+
+function animBounce(el) {
+  if (!el) return;
+  el.style.transform = 'scale(1.12)';
+  setTimeout(()=>el.style.transform='', 180);
+}
+
+/* ── SUBMIT ────────────────────────────────────────── */
+async function submit() {
+  const btn = document.getElementById('btn-next');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+  try {
+    const { error } = await sb.from('feedback').insert([{
+      name: fd.name,
+      profession: fd.profession || null,
+      linkedin_profile: fd.linkedin_profile || null,
+      insta_profile: fd.insta_profile || null,
+      dish_name: fd.dish_name,
+      flavours: fd.flavours,
+      price_range: fd.price_range,
+      taste_texture_rating: fd.taste_texture_rating,
+      first_impression_rating: fd.first_impression_rating,
+      found_healthy: fd.found_healthy,
+      feedback_text: fd.feedback_text || null,
+      india_market_vote: fd.india_market_vote
+    }]);
+    if (error) throw error;
+    showSuccess();
+  } catch(e) {
+    console.error(e);
+    toast('Oops! Something went wrong. Please try again!');
+    btn.textContent = 'Submit My Review 🚀'; btn.disabled = false;
+  }
+}
+
+function showSuccess() {
+  document.getElementById('nav').style.display = 'none';
+  document.getElementById('pbar').style.width = '100%';
+  document.getElementById('success').classList.add('show');
+  confetti();
+}
+
+/* ── CONFETTI ──────────────────────────────────────── */
+function confetti() {
+  const cv = document.getElementById('confetti');
+  const cx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const colors = ['#E8231A','#2BBFB3','#FFD700','#FF69B4','#A78BFA','#34D399'];
+  const pieces = Array.from({length:160},()=>({
+    x: Math.random()*cv.width,
+    y: Math.random()*cv.height - cv.height,
+    w: Math.random()*14+5, h: Math.random()*7+3,
+    c: colors[Math.floor(Math.random()*colors.length)],
+    r: Math.random()*Math.PI*2,
+    sp: Math.random()*3.5+1.5,
+    rs: (Math.random()-.5)*.18,
+    sx: (Math.random()-.5)*1.2
+  }));
+  (function loop(){
+    cx.clearRect(0,0,cv.width,cv.height);
+    let alive=false;
+    pieces.forEach(p=>{
+      p.y+=p.sp; p.x+=p.sx; p.r+=p.rs;
+      if(p.y<cv.height+20) alive=true;
+      cx.save(); cx.translate(p.x,p.y); cx.rotate(p.r);
+      cx.fillStyle=p.c; cx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      cx.restore();
+    });
+    if(alive) requestAnimationFrame(loop);
+    else cx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+/* ── TOAST ─────────────────────────────────────────── */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+boot();
+</script>
+</body>
+</html>

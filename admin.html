@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gully Bowls — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red:    #E8231A;
+      --teal:   #2BBFB3;
+      --ink:    #1A1A1A;
+      --sub:    #555;
+      --muted:  #888;
+      --border: #E4E4E7;
+      --bg:     #F7F7F8;
+      --card:   #FFFFFF;
+      --green:  #22C55E;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+    /* ── LOGIN ─────────────────────────────────── */
+    #login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 24px; background: #0D0D0D;
+    }
+    .login-box {
+      background: #1A1A1A; border-radius: 24px; padding: 40px 36px;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .login-box .logo { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+    .login-box .logo img { width: 54px; border-radius: 50%; }
+    .login-box .logo span {
+      font-family: 'Syne',sans-serif; font-size: 1.2rem; font-weight: 800; color: #fff;
+    }
+    .login-box h2 { font-family: 'Syne',sans-serif; font-size: 1.7rem; font-weight: 800; color: #fff; margin-bottom: 6px; }
+    .login-box p { font-size: .9rem; color: rgba(255,255,255,.5); margin-bottom: 28px; }
+    .l-field { margin-bottom: 16px; }
+    .l-field label { display: block; font-size: .82rem; font-weight: 600; color: rgba(255,255,255,.6); margin-bottom: 7px; }
+    .l-field input {
+      width: 100%; padding: 13px 16px; background: rgba(255,255,255,.07);
+      border: 1.5px solid rgba(255,255,255,.12); border-radius: 10px;
+      font-family: 'DM Sans',sans-serif; font-size: .97rem; color: #fff; outline: none;
+      transition: border-color .2s;
+    }
+    .l-field input:focus { border-color: var(--teal); }
+    .btn-login {
+      width: 100%; padding: 14px; margin-top: 8px;
+      background: var(--red); color: #fff; border: none; border-radius: 12px;
+      font-family: 'Syne',sans-serif; font-size: 1rem; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 20px rgba(232,35,26,.4);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 28px rgba(232,35,26,.5); }
+    .btn-login:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    #login-err { color: #FF6B6B; font-size: .85rem; margin-top: 12px; text-align: center; min-height: 20px; }
+
+    /* ── ADMIN LAYOUT ──────────────────────────── */
+    #admin-screen { display: none; min-height: 100vh; }
+
+    /* TOP BAR */
+    .topbar {
+      background: #fff; border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .topbar-left img { width: 40px; border-radius: 50%; }
+    .topbar-left .brand { font-family: 'Syne',sans-serif; font-size: 1.05rem; font-weight: 800; }
+    .topbar-left .badge {
+      background: var(--red); color: #fff; font-size: .7rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 100px; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .btn-logout {
+      padding: 8px 18px; border: 1.5px solid var(--border); background: #fff;
+      border-radius: 100px; font-size: .85rem; font-weight: 600; cursor: pointer;
+      transition: border-color .2s, background .2s; color: var(--sub);
+    }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+    /* TAB NAV */
+    .tabnav {
+      background: #fff; border-bottom: 1px solid var(--border);
+      padding: 0 28px; display: flex; gap: 0;
+    }
+    .tab {
+      padding: 14px 20px; font-size: .9rem; font-weight: 600;
+      color: var(--muted); cursor: pointer; border-bottom: 2.5px solid transparent;
+      transition: color .2s, border-color .2s; user-select: none;
+    }
+    .tab.active { color: var(--red); border-color: var(--red); }
+
+    /* CONTENT */
+    .content { padding: 28px; max-width: 1100px; margin: 0 auto; }
+
+    /* PANELS */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── STATS CARDS ────────────────────────────── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px; margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--card); border-radius: 16px; padding: 22px 24px;
+      border: 1px solid var(--border);
+    }
+    .stat-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+    .stat-val { font-family: 'Syne',sans-serif; font-size: 2.4rem; font-weight: 800; line-height: 1; }
+    .stat-val.red { color: var(--red); }
+    .stat-val.teal { color: var(--teal); }
+    .stat-val.green { color: var(--green); }
+    .stat-sub { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+
+    /* SECTION TITLE */
+    .sec-title {
+      font-family: 'Syne',sans-serif; font-size: 1.2rem; font-weight: 800;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+
+    /* RECENT TABLE */
+    .table-wrap { background: var(--card); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    thead { background: var(--bg); }
+    th { padding: 12px 16px; text-align: left; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+    td { padding: 13px 16px; border-bottom: 1px solid var(--border); color: var(--sub); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #FAFAFA; }
+    .stars-badge { color: #F59E0B; font-size: .85rem; }
+    .tag {
+      display: inline-block; padding: 3px 10px; border-radius: 100px;
+      font-size: .75rem; font-weight: 600; margin: 2px;
+    }
+    .tag-teal { background: rgba(43,191,179,.12); color: #1a9990; }
+    .tag-red  { background: rgba(232,35,26,.1); color: var(--red); }
+    .y-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .dot-g { background: var(--green); }
+    .dot-r { background: var(--red); }
+
+    /* ── DISH PANEL ─────────────────────────────── */
+    .dish-panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media(max-width:680px) { .dish-panel-grid { grid-template-columns: 1fr; } }
+
+    .form-card { background: var(--card); border-radius: 16px; padding: 26px; border: 1px solid var(--border); }
+    .form-card h3 { font-family: 'Syne',sans-serif; font-size: 1.05rem; font-weight: 800; margin-bottom: 20px; }
+
+    .f { margin-bottom: 18px; }
+    .f label { display: block; font-size: .83rem; font-weight: 600; margin-bottom: 7px; color: var(--ink); }
+    .f input[type=text], .f input[type=url] {
+      width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-family: 'DM Sans',sans-serif; font-size: .95rem; color: var(--ink); outline: none;
+      transition: border-color .2s;
+    }
+    .f input:focus { border-color: var(--teal); }
+    .f input[type=file] { font-size: .88rem; color: var(--sub); }
+
+    .preview-box {
+      width: 100%; height: 200px; border-radius: 12px; overflow: hidden;
+      background: linear-gradient(135deg, var(--teal),#1a8f89);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; margin-bottom: 16px;
+    }
+    .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+
+    .btn-save {
+      width: 100%; padding: 13px; background: var(--teal); color: #fff; border: none;
+      border-radius: 10px; font-family: 'Syne',sans-serif; font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .btn-save:hover { opacity: .88; }
+    .btn-save:disabled { opacity: .5; cursor: not-allowed; }
+    .save-msg { font-size: .85rem; margin-top: 10px; text-align: center; min-height: 18px; }
+    .save-msg.ok { color: var(--green); }
+    .save-msg.err { color: var(--red); }
+
+    /* ── RESPONSES PANEL ────────────────────────── */
+    .resp-toolbar {
+      display: flex; gap: 12px; align-items: center;
+      flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .resp-toolbar input[type=date] {
+      padding: 9px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-family: 'DM Sans',sans-serif; font-size: .9rem; color: var(--ink); outline: none;
+      background: var(--card); cursor: pointer;
+    }
+    .resp-toolbar input[type=date]:focus { border-color: var(--teal); }
+    .btn-export {
+      padding: 9px 20px; background: var(--ink); color: #fff; border: none;
+      border-radius: 100px; font-size: .88rem; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 7px;
+      transition: opacity .2s;
+    }
+    .btn-export:hover { opacity: .85; }
+    .resp-count { font-size: .88rem; color: var(--muted); margin-left: auto; }
+
+    /* FEEDBACK CELL */
+    .fb-cell { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* LOADING SPINNER */
+    .spinner-wrap { padding: 40px; text-align: center; }
+    .spinner { width: 28px; height: 28px; border: 2.5px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* EMPTY STATE */
+    .empty { padding: 52px 24px; text-align: center; color: var(--muted); font-size: .95rem; }
+
+    /* TOAST */
+    #a-toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--ink); color: #fff;
+      padding: 12px 22px; border-radius: 12px;
+      font-size: .9rem; font-weight: 500;
+      opacity: 0; transition: opacity .3s; z-index: 999;
+    }
+    #a-toast.show { opacity: 1; }
+
+    @media(max-width: 600px) {
+      .topbar { padding: 0 16px; }
+      .tabnav { padding: 0 10px; }
+      .content { padding: 16px; }
+      .tab { padding: 12px 14px; font-size: .82rem; }
+      th, td { padding: 10px 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ──────────────── LOGIN ──────────────── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo">
+      <img src="assets/logo.png" alt="Gully Bowls">
+      <span>Gully Bowls Admin</span>
+    </div>
+    <h2>Welcome back 👋</h2>
+    <p>Sign in to manage your dish and view feedback</p>
+    <div class="l-field">
+      <label>Admin Email</label>
+      <input type="email" id="l-email" placeholder="you@email.com" value="">
+    </div>
+    <div class="l-field">
+      <label>Password</label>
+      <input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Sign In →</button>
+    <div id="login-err"></div>
+  </div>
+</div>
+
+<!-- ──────────────── ADMIN ──────────────── -->
+<div id="admin-screen">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <img src="assets/logo.png" alt="">
+      <span class="brand">Gully Bowls</span>
+      <span class="badge">Admin</span>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabnav">
+    <div class="tab active" onclick="switchTab('overview', this)">📊 Overview</div>
+    <div class="tab" onclick="switchTab('dish', this)">🍜 Today's Dish</div>
+    <div class="tab" onclick="switchTab('responses', this)">📋 Responses</div>
+  </div>
+
+  <!-- ── PANEL: OVERVIEW ── -->
+  <div class="content">
+    <div class="panel active" id="panel-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Responses</div>
+          <div class="stat-val red" id="stat-total">–</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Today's Responses</div>
+          <div class="stat-val teal" id="stat-today">–</div>
+          <div class="stat-sub" id="stat-today-date">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Taste Rating</div>
+          <div class="stat-val" id="stat-taste">–</div>
+          <div class="stat-sub">out of 5 ⭐</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg First Impression</div>
+          <div class="stat-val" id="stat-imp">–</div>
+          <div class="stat-sub">out of 5 ⭐</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Found it Healthy</div>
+          <div class="stat-val green" id="stat-healthy">–</div>
+          <div class="stat-sub">said YES</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">India Market</div>
+          <div class="stat-val teal" id="stat-india">–</div>
+          <div class="stat-sub">said YES it'll work</div>
+        </div>
+      </div>
+
+      <div class="sec-title">📌 Latest Responses</div>
+      <div class="table-wrap" id="recent-wrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ── PANEL: DISH ── -->
+    <div class="panel" id="panel-dish">
+      <div style="margin-bottom:24px">
+        <div class="sec-title">🍜 Today's Dish</div>
+        <p style="font-size:.9rem;color:var(--muted)">Update the dish name and image that consumers see on the feedback form. This updates live — instantly!</p>
+      </div>
+      <div class="dish-panel-grid">
+        <div class="form-card">
+          <h3>Update Dish Info</h3>
+          <div class="f">
+            <label>Dish Name</label>
+            <input type="text" id="dish-name-in" placeholder="e.g. Masala Buddha Bowl">
+          </div>
+          <div class="f">
+            <label>Dish Image URL <span style="font-weight:400;color:var(--muted)">(paste a public image link)</span></label>
+            <input type="url" id="dish-url-in" placeholder="https://example.com/bowl.jpg"
+              oninput="previewUrl(this.value)">
+          </div>
+          <div class="f">
+            <label>— or — Upload an Image File</label>
+            <input type="file" id="dish-file-in" accept="image/*" onchange="previewFile(this)">
+          </div>
+          <button class="btn-save" id="btn-save-dish" onclick="saveDish()">Save Dish ✓</button>
+          <div class="save-msg" id="dish-msg"></div>
+        </div>
+        <div class="form-card" style="display:flex;flex-direction:column">
+          <h3>Live Preview</h3>
+          <div class="preview-box" id="preview-box"><span>🍜</span></div>
+          <p style="font-size:.85rem;color:var(--muted);text-align:center">This is what consumers will see</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PANEL: RESPONSES ── -->
+    <div class="panel" id="panel-responses">
+      <div class="resp-toolbar">
+        <input type="date" id="filter-date" onchange="loadResponses()">
+        <button class="btn-export" onclick="exportXLSX()">⬇ Export Excel</button>
+        <span class="resp-count" id="resp-count"></span>
+      </div>
+      <div class="table-wrap" id="resp-wrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="a-toast"></div>
+
+<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script>
+/* ── SUPABASE ─────────────────────────────────────── */
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let allResponses = [];
+
+/* ── AUTH ─────────────────────────────────────────── */
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) showAdmin();
+}
+
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  const btn   = document.getElementById('btn-login');
+  const err   = document.getElementById('login-err');
+
+  err.textContent = '';
+  if (!email || !pass) { err.textContent = 'Please enter email and password'; return; }
+
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+  if (error) {
+    err.textContent = 'Invalid email or password. Please try again.';
+    btn.textContent = 'Sign In →'; btn.disabled = false;
+  } else {
+    showAdmin();
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('admin-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function showAdmin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-screen').style.display = 'block';
+  loadDashboard();
+}
+
+/* ── TABS ─────────────────────────────────────────── */
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  if (name==='dish') loadCurrentDish();
+  if (name==='responses') { setTodayDate(); loadResponses(); }
+}
+
+/* ── DASHBOARD ─────────────────────────────────────── */
+async function loadDashboard() {
+  // Load all feedback
+  const { data, error } = await sb.from('feedback').select('*').order('created_at',{ascending:false});
+  if (error) { aToast('Could not load data'); return; }
+  allResponses = data || [];
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayRows = allResponses.filter(r=>r.submitted_date===today);
+
+  document.getElementById('stat-total').textContent = allResponses.length;
+  document.getElementById('stat-today').textContent = todayRows.length;
+  document.getElementById('stat-today-date').textContent = fmt(today);
+
+  const avgTaste = avg(allResponses, 'taste_texture_rating');
+  const avgImp   = avg(allResponses, 'first_impression_rating');
+  document.getElementById('stat-taste').textContent = avgTaste ? avgTaste + ' ⭐' : '–';
+  document.getElementById('stat-imp').textContent   = avgImp   ? avgImp   + ' ⭐' : '–';
+
+  const healthyCount = allResponses.filter(r=>r.found_healthy===true).length;
+  const indiaCount   = allResponses.filter(r=>r.india_market_vote===true).length;
+  document.getElementById('stat-healthy').textContent = allResponses.length ? Math.round(healthyCount/allResponses.length*100)+'%' : '–';
+  document.getElementById('stat-india').textContent   = allResponses.length ? Math.round(indiaCount/allResponses.length*100)+'%'   : '–';
+
+  renderRecentTable(allResponses.slice(0, 8));
+}
+
+function avg(rows, key) {
+  const valid = rows.filter(r=>r[key]);
+  if (!valid.length) return null;
+  return (valid.reduce((s,r)=>s+r[key],0)/valid.length).toFixed(1);
+}
+
+function renderRecentTable(rows) {
+  const wrap = document.getElementById('recent-wrap');
+  if (!rows.length) { wrap.innerHTML='<div class="empty">No responses yet. Share your form link to start collecting feedback! 🚀</div>'; return; }
+  wrap.innerHTML = buildTable(rows);
+}
+
+function buildTable(rows) {
+  if (!rows.length) return '<div class="empty">No responses found for this date.</div>';
+  return `
+  <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Name</th>
+        <th>Profession</th>
+        <th>Dish</th>
+        <th>Flavours</th>
+        <th>Price</th>
+        <th>Taste</th>
+        <th>Impression</th>
+        <th>Healthy?</th>
+        <th>India MKT</th>
+        <th>Feedback</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows.map(r=>`
+      <tr>
+        <td>${fmt(r.submitted_date)}</td>
+        <td><strong>${esc(r.name)}</strong>${r.insta_profile?`<br><span style="font-size:.78rem;color:var(--muted)">@${esc(r.insta_profile)}</span>`:''}</td>
+        <td>${esc(r.profession)||'–'}</td>
+        <td>${esc(r.dish_name)||'–'}</td>
+        <td>${(r.flavours||[]).map(f=>`<span class="tag tag-teal">${f}</span>`).join('')||'–'}</td>
+        <td>${esc(r.price_range)||'–'}</td>
+        <td class="stars-badge">${stars(r.taste_texture_rating)}</td>
+        <td class="stars-badge">${stars(r.first_impression_rating)}</td>
+        <td>${r.found_healthy===true?'<span class="y-dot dot-g"></span>Yes':'<span class="y-dot dot-r"></span>No'}</td>
+        <td>${r.india_market_vote===true?'<span class="y-dot dot-g"></span>Yes':'<span class="y-dot dot-r"></span>No'}</td>
+        <td class="fb-cell" title="${esc(r.feedback_text||'')}">${esc(r.feedback_text)||'–'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+  </div>`;
+}
+
+/* ── DISH ─────────────────────────────────────────── */
+async function loadCurrentDish() {
+  const { data } = await sb.from('dish_config').select('*').eq('id',1).single();
+  if (data) {
+    document.getElementById('dish-name-in').value = data.dish_name || '';
+    document.getElementById('dish-url-in').value  = data.dish_image_url || '';
+    if (data.dish_image_url) previewUrl(data.dish_image_url);
+  }
+}
+
+function previewUrl(url) {
+  const box = document.getElementById('preview-box');
+  if (url) {
+    box.innerHTML = `<img src="${url}" alt="preview" onerror="this.parentElement.innerHTML='<span>🍜</span>'">`;
+  } else {
+    box.innerHTML = '<span>🍜</span>';
+  }
+}
+
+function previewFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-box').innerHTML = `<img src="${e.target.result}" alt="preview">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveDish() {
+  const name = document.getElementById('dish-name-in').value.trim();
+  const urlIn = document.getElementById('dish-url-in').value.trim();
+  const fileIn = document.getElementById('dish-file-in').files[0];
+  const msg = document.getElementById('dish-msg');
+  const btn = document.getElementById('btn-save-dish');
+
+  if (!name) { aToast('Dish name is required!'); return; }
+
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  msg.textContent = ''; msg.className = 'save-msg';
+
+  let imageUrl = urlIn;
+
+  // Upload file if provided
+  if (fileIn) {
+    const ext  = fileIn.name.split('.').pop();
+    const path = `dish-${Date.now()}.${ext}`;
+    const { data: upData, error: upErr } = await sb.storage.from('dish-images').upload(path, fileIn, { upsert: true });
+    if (upErr) {
+      msg.textContent = 'Image upload failed: ' + upErr.message;
+      msg.className = 'save-msg err';
+      btn.textContent = 'Save Dish ✓'; btn.disabled = false;
+      return;
+    }
+    const { data: pubData } = sb.storage.from('dish-images').getPublicUrl(path);
+    imageUrl = pubData.publicUrl;
+    document.getElementById('dish-url-in').value = imageUrl;
+    previewUrl(imageUrl);
+  }
+
+  const { error } = await sb.from('dish_config').update({
+    dish_name: name,
+    dish_image_url: imageUrl || null,
+    updated_at: new Date().toISOString()
+  }).eq('id', 1);
+
+  if (error) {
+    msg.textContent = 'Error saving: ' + error.message;
+    msg.className = 'save-msg err';
+  } else {
+    msg.textContent = '✓ Saved! The consumer form now shows this dish.';
+    msg.className = 'save-msg ok';
+    aToast('Dish updated successfully!');
+  }
+
+  btn.textContent = 'Save Dish ✓'; btn.disabled = false;
+}
+
+/* ── RESPONSES ─────────────────────────────────────── */
+function setTodayDate() {
+  const d = new Date().toISOString().split('T')[0];
+  document.getElementById('filter-date').value = d;
+}
+
+async function loadResponses() {
+  const dateVal = document.getElementById('filter-date').value;
+  document.getElementById('resp-wrap').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  document.getElementById('resp-count').textContent = '';
+
+  let query = sb.from('feedback').select('*').order('created_at',{ascending:false});
+  if (dateVal) query = query.eq('submitted_date', dateVal);
+
+  const { data, error } = await query;
+  if (error) { document.getElementById('resp-wrap').innerHTML='<div class="empty">Error loading responses</div>'; return; }
+
+  allResponses = data || [];
+  document.getElementById('resp-wrap').innerHTML = buildTable(allResponses);
+  document.getElementById('resp-count').textContent = `${allResponses.length} response${allResponses.length!==1?'s':''}`;
+}
+
+/* ── EXPORT ─────────────────────────────────────────── */
+function exportXLSX() {
+  if (!allResponses.length) { aToast('No data to export!'); return; }
+
+  const rows = allResponses.map(r=>({
+    'Date':              r.submitted_date,
+    'Submitted At':      r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '',
+    'Name':              r.name,
+    'Profession':        r.profession || '',
+    'LinkedIn':          r.linkedin_profile || '',
+    'Instagram':         r.insta_profile || '',
+    'Dish Name':         r.dish_name || '',
+    'Flavours':          (r.flavours||[]).join(', '),
+    'Price Range':       r.price_range || '',
+    'Taste Rating':      r.taste_texture_rating || '',
+    'First Impression':  r.first_impression_rating || '',
+    'Found Healthy':     r.found_healthy === true ? 'Yes' : 'No',
+    'India Market':      r.india_market_vote === true ? 'Yes' : 'No',
+    'Feedback':          r.feedback_text || ''
+  }));
+
+  const ws  = XLSX.utils.json_to_sheet(rows);
+  const wb  = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Feedback');
+
+  // Style column widths
+  ws['!cols'] = [
+    {wch:12},{wch:20},{wch:20},{wch:20},{wch:28},{wch:20},
+    {wch:24},{wch:28},{wch:16},{wch:10},{wch:14},{wch:14},{wch:12},{wch:40}
+  ];
+
+  const dateStr = document.getElementById('filter-date').value || 'all';
+  XLSX.writeFile(wb, `gully-bowls-feedback-${dateStr}.xlsx`);
+  aToast('Excel file downloaded!');
+}
+
+/* ── HELPERS ─────────────────────────────────────────── */
+function fmt(d) {
+  if (!d) return '–';
+  return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+}
+function stars(n) {
+  if (!n) return '–';
+  return '⭐'.repeat(n) + ` (${n}/5)`;
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function aToast(msg) {
+  const t = document.getElementById('a-toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+/* ── BOOT ─────────────────────────────────────────── */
+checkSession();
+</script>
+</body>
+</html>
